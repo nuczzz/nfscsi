@@ -1,1 +1,56 @@
 package main
+
+import (
+	"flag"
+	"log"
+	"net"
+
+	"github.com/container-storage-interface/spec/lib/go/csi"
+	"google.golang.org/grpc"
+
+	"nfscsi/pkg"
+)
+
+var (
+	endpoint   = flag.String("endpoint", "/csi/csi.sock", "CSI unix socket")
+	driverName = flag.String("driver-name", "nfscsi", "CSI driver name")
+	nodeId     = flag.String("nodeid", "nfs-csi-node", "node id of CSI")
+	version    = flag.String("version", "N/A", "version of CSI")
+	server     = flag.String("server", "", "nfs server ip")
+	serverPath = flag.String("serverPath", "", "nfs server root mount path")
+	mountPath  = flag.String("mountPath", "/mount", "local mount path")
+)
+
+func main() {
+	flag.Parse()
+
+	log.Printf("driverName: %s, version: %s, nodeID: %s", *driverName, *version, *nodeId)
+
+	ln, err := net.Listen("unix", *endpoint)
+	if err != nil {
+		log.Fatalf("listen unix endpoint %s error: %s", *endpoint, err.Error())
+	}
+	defer ln.Close()
+
+	grpcServer := grpc.NewServer()
+
+	nfsDriver := pkg.NewNFSDriver(&pkg.Options{
+		Name:         *driverName,
+		Version:      *version,
+		NodeID:       *nodeId,
+		NFSServer:    *server,
+		NFSRootPath:  *serverPath,
+		NFSMountPath: *mountPath,
+	})
+
+	csi.RegisterIdentityServer(grpcServer, pkg.NewIdentityServer(nfsDriver))
+	csi.RegisterControllerServer(grpcServer, pkg.NewControllerServer(nfsDriver))
+	csi.RegisterNodeServer(grpcServer, pkg.NewNodeDriver(nfsDriver))
+
+	log.Println("grpc server start")
+	defer log.Println("grpc server exit")
+
+	if err = grpcServer.Serve(ln); err != nil {
+		log.Fatalf("grpc serve error: %s", err.Error())
+	}
+}

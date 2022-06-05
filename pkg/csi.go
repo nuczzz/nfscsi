@@ -1,27 +1,87 @@
 package pkg
 
-import (
-	"github.com/container-storage-interface/spec/lib/go/csi"
-)
+import "github.com/container-storage-interface/spec/lib/go/csi"
 
-type CSI interface {
-	csi.IdentityServer
-	csi.ControllerServer
-	csi.NodeServer
-}
-
-type nfsDriver struct {
+type Options struct {
 	Name    string
 	Version string
 	NodeID  string
+
+	NFSServer    string
+	NFSRootPath  string
+	NFSMountPath string
 }
 
-var _ CSI = &nfsDriver{}
+type NFSDriver struct {
+	name    string
+	version string
+	nodeID  string
 
-func NewNfsDriver(name, version, nodeID string) CSI {
-	return &nfsDriver{
-		Name:    name,
-		Version: version,
-		NodeID:  nodeID,
+	nfsServer    string
+	nfsRootPath  string
+	nfsMountPath string
+
+	controllerServiceCapabilities []*csi.ControllerServiceCapability
+	nodeServiceCapabilities       []*csi.NodeServiceCapability
+}
+
+var _ csi.IdentityServer = &NFSDriver{}
+var _ csi.ControllerServer = &NFSDriver{}
+var _ csi.NodeServer = &NFSDriver{}
+
+func NewNFSDriver(opt *Options) *NFSDriver {
+	nfs := &NFSDriver{
+		name:         opt.Name,
+		version:      opt.Version,
+		nodeID:       opt.NodeID,
+		nfsServer:    opt.NFSServer,
+		nfsRootPath:  opt.NFSRootPath,
+		nfsMountPath: opt.NFSMountPath,
 	}
+
+	nfs.addControllerServiceCapabilities([]csi.ControllerServiceCapability_RPC_Type{
+		csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
+	})
+
+	/*nfs.addNodeServiceCapabilities([]csi.NodeServiceCapability_RPC_Type{
+		csi.NodeServiceCapability_RPC_UNKNOWN,
+	})*/
+
+	return nfs
+}
+
+func newControllerServiceCapability(cap csi.ControllerServiceCapability_RPC_Type) *csi.ControllerServiceCapability {
+	return &csi.ControllerServiceCapability{
+		Type: &csi.ControllerServiceCapability_Rpc{
+			Rpc: &csi.ControllerServiceCapability_RPC{
+				Type: cap,
+			},
+		},
+	}
+}
+
+func (nfs *NFSDriver) addControllerServiceCapabilities(capabilities []csi.ControllerServiceCapability_RPC_Type) {
+	var csc = make([]*csi.ControllerServiceCapability, 0, len(capabilities))
+	for _, c := range capabilities {
+		csc = append(csc, newControllerServiceCapability(c))
+	}
+	nfs.controllerServiceCapabilities = csc
+}
+
+func newNodeServiceCapability(cap csi.NodeServiceCapability_RPC_Type) *csi.NodeServiceCapability {
+	return &csi.NodeServiceCapability{
+		Type: &csi.NodeServiceCapability_Rpc{
+			Rpc: &csi.NodeServiceCapability_RPC{
+				Type: cap,
+			},
+		},
+	}
+}
+
+func (nfs *NFSDriver) addNodeServiceCapabilities(capabilities []csi.NodeServiceCapability_RPC_Type) {
+	var nsc = make([]*csi.NodeServiceCapability, 0, len(capabilities))
+	for _, n := range capabilities {
+		nsc = append(nsc, newNodeServiceCapability(n))
+	}
+	nfs.nodeServiceCapabilities = nsc
 }

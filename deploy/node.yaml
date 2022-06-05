@@ -1,0 +1,141 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nfs-csi-node
+  namespace: kube-system
+
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: nfs-csi-node
+rules:
+  #  - apiGroups: [""]
+  #    resources: ["persistentvolumes"]
+  #    verbs: ["get", "list", "watch", "create", "delete"]
+  #  - apiGroups: [""]
+  #    resources: ["persistentvolumeclaims"]
+  #    verbs: ["get", "list", "watch", "update"]
+  #  - apiGroups: ["storage.k8s.io"]
+  #    resources: ["storageclasses"]
+  #    verbs: ["get", "list", "watch"]
+  #  - apiGroups: [""]
+  #    resources: ["events"]
+  #    verbs: ["get", "list", "watch", "create", "update", "patch"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["csinodes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "watch"]
+#  - apiGroups: ["coordination.k8s.io"]
+#    resources: ["leases"]
+#    verbs: ["get", "list", "watch", "create", "update", "patch"]
+#  - apiGroups: [""]
+#    resources: ["secrets"]
+#    verbs: ["get"]
+
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: nfs-csi-node
+subjects:
+  - kind: ServiceAccount
+    name: nfs-csi-node
+    namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: nfs-csi-node
+  apiGroup: rbac.authorization.k8s.io
+
+---
+kind: DaemonSet
+apiVersion: apps/v1
+metadata:
+  name: nfs-csi-node
+  namespace: kube-system
+spec:
+  updateStrategy:
+    rollingUpdate:
+      maxUnavailable: 1
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: nfs-csi-node
+  template:
+    metadata:
+      labels:
+        app: nfs-csi-node
+    spec:
+      hostNetwork: true  # original nfs connection would be broken without hostNetwork setting
+      dnsPolicy: Default  # available values: Default, ClusterFirstWithHostNet, ClusterFirst
+      serviceAccountName: nfs-csi-node
+      nodeSelector:
+        kubernetes.io/os: linux
+        # kubernetes.io/hostname: vm-12-7-centos # 调试阶段可以先指定某一个节点启动
+      tolerations:
+        - operator: "Exists"
+      containers:
+        - name: node-driver-registrar
+          image: objectscale/csi-node-driver-registrar:v3.1.0
+          imagePullPolicy: IfNotPresent
+          args:
+            - --v=2
+            - --csi-address=/csi/csi.sock
+            - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
+          env:
+            - name: DRIVER_REG_SOCK_PATH
+              value: /var/lib/kubelet/plugins/csi-nfsplugin/csi.sock
+            - name: KUBE_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /csi
+            - name: registration-dir
+              mountPath: /registration
+          resources:
+            limits:
+              memory: 100Mi
+            requests:
+              cpu: 10m
+              memory: 20Mi
+        - name: nfs-csi
+          securityContext:
+            privileged: true
+            capabilities:
+              add: ["SYS_ADMIN"]
+            allowPrivilegeEscalation: true
+          image: nfs-csi:v1.0
+          imagePullPolicy: "IfNotPresent"
+          args:
+            - "--endpoint=$(CSI_ENDPOINT)"
+            - "--nodeid=$(NODE_ID)"
+          env:
+            - name: NODE_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: CSI_ENDPOINT
+              value: /csi/csi.sock
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /csi
+          resources:
+            limits:
+              memory: 300Mi
+            requests:
+              cpu: 10m
+              memory: 20Mi
+      volumes:
+        - name: socket-dir
+          hostPath:
+            path: /var/lib/kubelet/plugins/csi-nfsplugin
+            type: DirectoryOrCreate
+        - name: registration-dir
+          hostPath:
+            path: /var/lib/kubelet/plugins_registry
+            type: Directory
