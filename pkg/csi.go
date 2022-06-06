@@ -1,6 +1,9 @@
 package pkg
 
-import "github.com/container-storage-interface/spec/lib/go/csi"
+import (
+	"github.com/container-storage-interface/spec/lib/go/csi"
+	mount "k8s.io/mount-utils"
+)
 
 type Options struct {
 	Name    string
@@ -21,6 +24,8 @@ type NFSDriver struct {
 	nfsRootPath  string
 	nfsMountPath string
 
+	mounter mount.Interface
+
 	controllerServiceCapabilities []*csi.ControllerServiceCapability
 	nodeServiceCapabilities       []*csi.NodeServiceCapability
 }
@@ -37,6 +42,7 @@ func NewNFSDriver(opt *Options) *NFSDriver {
 		nfsServer:    opt.NFSServer,
 		nfsRootPath:  opt.NFSRootPath,
 		nfsMountPath: opt.NFSMountPath,
+		mounter:      mount.New(""),
 	}
 
 	nfs.addControllerServiceCapabilities([]csi.ControllerServiceCapability_RPC_Type{

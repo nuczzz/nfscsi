@@ -8,10 +8,6 @@ import (
 	"github.com/golang/protobuf/ptypes/wrappers"
 )
 
-func NewIdentityServer(nfs *NFSDriver) csi.IdentityServer {
-	return csi.IdentityServer(nfs)
-}
-
 func (nfs *NFSDriver) GetPluginInfo(context.Context, *csi.GetPluginInfoRequest) (*csi.GetPluginInfoResponse, error) {
 	log.Println("GetPluginInfo request")
 

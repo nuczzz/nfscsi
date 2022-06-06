@@ -29,12 +29,12 @@ rules:
   - apiGroups: [""]
     resources: ["events"]
     verbs: ["get", "list", "watch", "create", "update", "patch"]
-#  - apiGroups: ["storage.k8s.io"]
-#    resources: ["csinodes"]
-#    verbs: ["get", "list", "watch"]
-#  - apiGroups: [""]
-#    resources: ["nodes"]
-#    verbs: ["get", "list", "watch"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["csinodes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "watch"]
   - apiGroups: ["coordination.k8s.io"]
     resources: ["leases"]
     verbs: ["get", "list", "watch", "create", "update", "patch"]
@@ -133,7 +133,7 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /csi
-            - mame: nfs-server
+            - name: nfs-server
               mountPath: /mount
           resources:
             limits:

@@ -1,5 +1,7 @@
 # github.com/container-storage-interface/spec v1.6.0
 github.com/container-storage-interface/spec/lib/go/csi
+# github.com/go-logr/logr v1.2.0
+github.com/go-logr/logr
 # github.com/golang/protobuf v1.3.2
 github.com/golang/protobuf/proto
 github.com/golang/protobuf/protoc-gen-go/descriptor
@@ -8,6 +10,8 @@ github.com/golang/protobuf/ptypes/any
 github.com/golang/protobuf/ptypes/duration
 github.com/golang/protobuf/ptypes/timestamp
 github.com/golang/protobuf/ptypes/wrappers
+# github.com/pkg/errors v0.9.1
+github.com/pkg/errors
 # golang.org/x/net v0.0.0-20190311183353-d8887717615a
 golang.org/x/net/http/httpguts
 golang.org/x/net/http2
@@ -61,3 +65,15 @@ google.golang.org/grpc/serviceconfig
 google.golang.org/grpc/stats
 google.golang.org/grpc/status
 google.golang.org/grpc/tap
+# k8s.io/klog/v2 v2.60.1
+k8s.io/klog/v2
+k8s.io/klog/v2/internal/buffer
+k8s.io/klog/v2/internal/clock
+k8s.io/klog/v2/internal/serialize
+k8s.io/klog/v2/internal/severity
+# k8s.io/mount-utils v0.24.1
+k8s.io/mount-utils
+# k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9
+k8s.io/utils/exec
+k8s.io/utils/io
+k8s.io/utils/keymutex

@@ -7,30 +7,35 @@ import (
 	"path/filepath"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func NewControllerServer(nfsDriver *NFSDriver) csi.ControllerServer {
-	return csi.ControllerServer(nfsDriver)
-}
-
 func (nfs *NFSDriver) CreateVolume(_ context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
 	log.Println("CreateVolume request")
 
-	mountPath := filepath.Join(nfs.mountPath, req.GetName())
+	log.Println("req name: ", req.GetName())
+	mountPath := filepath.Join(nfs.nfsMountPath, req.GetName())
 	if err := os.Mkdir(mountPath, 0755); err != nil {
 		log.Printf("mkdir %s error: %s", mountPath, err.Error())
-		return nil, controller.ProvisioningFinished, errors.Wrap(err, "mkdir error")
+		return nil, errors.Wrap(err, "mkdir error")
 	}
 
-	return nil, status.Error(codes.Unimplemented, "")
+	return &csi.CreateVolumeResponse{
+		Volume: &csi.Volume{
+			VolumeId:      req.Name,
+			CapacityBytes: 0,
+		},
+	}, nil
 }
 
-func (nfs *NFSDriver) DeleteVolume(context.Context, *csi.DeleteVolumeRequest) (*csi.DeleteVolumeResponse, error) {
+func (nfs *NFSDriver) DeleteVolume(_ context.Context, req *csi.DeleteVolumeRequest) (*csi.DeleteVolumeResponse, error) {
 	log.Println("DeleteVolume request")
 
-	return nil, status.Error(codes.Unimplemented, "")
+	log.Println("volumeID: ", req.GetVolumeId())
+
+	return nil, os.Remove(filepath.Join(nfs.nfsMountPath, req.GetVolumeId()))
 }
 
 func (nfs *NFSDriver) ControllerPublishVolume(context.Context, *csi.ControllerPublishVolumeRequest) (*csi.ControllerPublishVolumeResponse, error) {

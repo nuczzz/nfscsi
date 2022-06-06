@@ -43,9 +43,9 @@ func main() {
 		NFSMountPath: *mountPath,
 	})
 
-	csi.RegisterIdentityServer(grpcServer, pkg.NewIdentityServer(nfsDriver))
-	csi.RegisterControllerServer(grpcServer, pkg.NewControllerServer(nfsDriver))
-	csi.RegisterNodeServer(grpcServer, pkg.NewNodeDriver(nfsDriver))
+	csi.RegisterIdentityServer(grpcServer, nfsDriver)
+	csi.RegisterControllerServer(grpcServer, nfsDriver)
+	csi.RegisterNodeServer(grpcServer, nfsDriver)
 
 	log.Println("grpc server start")
 	defer log.Println("grpc server exit")
