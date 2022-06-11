@@ -58,7 +58,7 @@ type NodeServer interface {
 
 在[《kubernetes CSI（中）》](https://mp.weixin.qq.com/s/FVN5Kxckq_NL8P57AhQDlw)一文中，我们分析了CSI插件的注册流程：
 
-【图】
+![](pic/registrar.png)
 
 CSI插件注册过程只会调用CSI进程的两个方法，这两个方法分别是`IdentityServer下的GetPluginInfo方法`和`NodeServer下的NodeGetInfo方法`，于是我们先实现这两个方法验证下验证下注册过程（其它方法暂时均直接返回error）：
 
