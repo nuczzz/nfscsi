@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/pkg/errors"
@@ -42,7 +44,25 @@ func (nfs *NFSDriver) NodePublishVolume(_ context.Context, req *csi.NodePublishV
 		return nil, errors.Errorf("target path is nill")
 	}
 
-	source := fmt.Sprintf("%s:%s", nfs.nfsServer, nfs.nfsRootPath)
+	source := fmt.Sprintf("%s:%s", nfs.nfsServer, filepath.Join(nfs.nfsRootPath, req.GetVolumeId()))
+
+	notMnt, err := nfs.mounter.IsLikelyNotMountPoint(targetPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			if err := os.MkdirAll(targetPath, os.FileMode(0755)); err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+			notMnt = true
+		} else {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+	if !notMnt {
+		return &csi.NodePublishVolumeResponse{}, nil
+	}
+
+	log.Printf("source: %s, targetPath: %s, options: %v", source, targetPath, options)
+
 	if err := nfs.mounter.Mount(source, targetPath, "nfs", options); err != nil {
 		return nil, errors.Wrap(err, "mount nfs path error")
 	}
@@ -76,7 +96,9 @@ func (nfs *NFSDriver) NodeExpandVolume(context.Context, *csi.NodeExpandVolumeReq
 func (nfs *NFSDriver) NodeGetCapabilities(context.Context, *csi.NodeGetCapabilitiesRequest) (*csi.NodeGetCapabilitiesResponse, error) {
 	log.Println("NodeGetCapabilities request")
 
-	return nil, status.Error(codes.Unimplemented, "")
+	return &csi.NodeGetCapabilitiesResponse{
+		Capabilities: nfs.nodeServiceCapabilities,
+	}, nil
 }
 
 func (nfs *NFSDriver) NodeGetInfo(context.Context, *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {

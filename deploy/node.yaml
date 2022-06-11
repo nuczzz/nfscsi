@@ -11,30 +11,12 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: nfs-csi-node
 rules:
-  #  - apiGroups: [""]
-  #    resources: ["persistentvolumes"]
-  #    verbs: ["get", "list", "watch", "create", "delete"]
-  #  - apiGroups: [""]
-  #    resources: ["persistentvolumeclaims"]
-  #    verbs: ["get", "list", "watch", "update"]
-  #  - apiGroups: ["storage.k8s.io"]
-  #    resources: ["storageclasses"]
-  #    verbs: ["get", "list", "watch"]
-  #  - apiGroups: [""]
-  #    resources: ["events"]
-  #    verbs: ["get", "list", "watch", "create", "update", "patch"]
   - apiGroups: ["storage.k8s.io"]
     resources: ["csinodes"]
     verbs: ["get", "list", "watch"]
   - apiGroups: [""]
     resources: ["nodes"]
     verbs: ["get", "list", "watch"]
-#  - apiGroups: ["coordination.k8s.io"]
-#    resources: ["leases"]
-#    verbs: ["get", "list", "watch", "create", "update", "patch"]
-#  - apiGroups: [""]
-#    resources: ["secrets"]
-#    verbs: ["get"]
 
 ---
 kind: ClusterRoleBinding
@@ -74,12 +56,12 @@ spec:
       serviceAccountName: nfs-csi-node
       nodeSelector:
         kubernetes.io/os: linux
-        # kubernetes.io/hostname: vm-12-7-centos # 调试阶段可以先指定某一个节点启动
+        kubernetes.io/hostname: vm-12-7-centos # 调试阶段可以先指定某一个节点启动
       tolerations:
         - operator: "Exists"
       containers:
         - name: node-driver-registrar
-          image: objectscale/csi-node-driver-registrar:v3.1.0
+          image: objectscale/csi-node-driver-registrar:v2.5.0
           imagePullPolicy: IfNotPresent
           args:
             - --v=2
@@ -112,8 +94,10 @@ spec:
           image: nfs-csi:v1.0
           imagePullPolicy: "IfNotPresent"
           args:
-            - "--endpoint=$(CSI_ENDPOINT)"
-            - "--nodeid=$(NODE_ID)"
+            - --endpoint=$(CSI_ENDPOINT)
+            - --nodeid=$(NODE_ID)
+            - --server="" # 配置nfs server ip
+            - --serverPath="" # 配置nfs server root path
           env:
             - name: NODE_ID
               valueFrom:
@@ -124,6 +108,9 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /csi
+            - name: pods-mount-dir
+              mountPath: /var/lib/kubelet/pods
+              mountPropagation: "Bidirectional"
           resources:
             limits:
               memory: 300Mi
@@ -135,6 +122,10 @@ spec:
           hostPath:
             path: /var/lib/kubelet/plugins/csi-nfsplugin
             type: DirectoryOrCreate
+        - name: pods-mount-dir
+          hostPath:
+            path: /var/lib/kubelet/pods
+            type: Directory
         - name: registration-dir
           hostPath:
             path: /var/lib/kubelet/plugins_registry

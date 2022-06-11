@@ -47,11 +47,13 @@ func NewNFSDriver(opt *Options) *NFSDriver {
 
 	nfs.addControllerServiceCapabilities([]csi.ControllerServiceCapability_RPC_Type{
 		csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
+		//csi.ControllerServiceCapability_RPC_SINGLE_NODE_MULTI_WRITER,
 	})
 
-	/*nfs.addNodeServiceCapabilities([]csi.NodeServiceCapability_RPC_Type{
-		csi.NodeServiceCapability_RPC_UNKNOWN,
-	})*/
+	nfs.addNodeServiceCapabilities([]csi.NodeServiceCapability_RPC_Type{
+		//csi.NodeServiceCapability_RPC_SINGLE_NODE_MULTI_WRITER,
+		//csi.NodeServiceCapability_RPC_UNKNOWN,
+	})
 
 	return nfs
 }

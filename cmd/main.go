@@ -4,6 +4,7 @@ import (
 	"flag"
 	"log"
 	"net"
+	"os"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"google.golang.org/grpc"
@@ -26,11 +27,19 @@ func main() {
 
 	log.Printf("driverName: %s, version: %s, nodeID: %s", *driverName, *version, *nodeId)
 
+	// remove endpoint before start
+	if err := os.Remove(*endpoint); err != nil && !os.IsNotExist(err) {
+		log.Fatalf("remove endpoint %s error", *endpoint)
+	}
+
 	ln, err := net.Listen("unix", *endpoint)
 	if err != nil {
 		log.Fatalf("listen unix endpoint %s error: %s", *endpoint, err.Error())
 	}
-	defer ln.Close()
+	defer func() {
+		_ = ln.Close()
+		_ = os.Remove(*endpoint)
+	}()
 
 	grpcServer := grpc.NewServer()
 
